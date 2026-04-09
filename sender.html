@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Send to Group Savings</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  :root {
+    --bg:#f7f7f7; --white:#fff; --black:#1a1a1a;
+    --gray-100:#f2f2f2; --gray-200:#e8e8e8; --gray-300:#d1d1d1;
+    --gray-400:#999; --gray-500:#666;
+    --teal:#0e856e; --teal-light:#e8f5f1; --teal-dark:#0a6b58;
+    --mint:#36c5a0; --red:#e74c3c;
+    --radius:16px; --radius-sm:10px;
+    --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font); background:var(--bg); color:var(--black); min-height:100vh; min-height:100dvh; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+
+  .screen { display:none; min-height:100vh; min-height:100dvh; flex-direction:column; }
+  .screen.active { display:flex; }
+
+  /* ── Error ── */
+  .error-screen-page { background:var(--black); color:#fff; align-items:center; justify-content:center; padding:40px; text-align:center; }
+  .error-screen-page h2 { font-size:24px; margin-bottom:12px; }
+  .error-screen-page p { color:rgba(255,255,255,.5); font-size:15px; line-height:1.6; }
+  .error-screen-page a { color:var(--mint); }
+
+  /* ── Login ── */
+  .login-screen { background:var(--black); color:#fff; align-items:center; justify-content:center; padding:40px 32px; position:relative; overflow:hidden; }
+  .login-screen::before { content:''; position:absolute; top:-100px; right:-100px; width:350px; height:350px; background:radial-gradient(circle,rgba(14,133,110,.25) 0%,transparent 70%); }
+  .login-content { width:100%; max-width:360px; position:relative; z-index:1; }
+  .login-logo { font-size:18px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--mint); margin-bottom:48px; }
+  .login-title { font-size:32px; font-weight:700; line-height:1.2; margin-bottom:8px; letter-spacing:-.5px; }
+  .login-subtitle { font-size:15px; color:rgba(255,255,255,.5); margin-bottom:40px; }
+  .form-group { margin-bottom:20px; }
+  .form-label { display:block; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,.5); margin-bottom:8px; }
+  .form-input { width:100%; padding:16px 20px; border:1.5px solid rgba(255,255,255,.15); border-radius:var(--radius-sm); background:rgba(255,255,255,.06); color:#fff; font-size:16px; font-family:var(--font); font-weight:500; outline:none; transition:border-color .2s; }
+  .form-input:focus { border-color:var(--teal); }
+  .form-input::placeholder { color:rgba(255,255,255,.25); }
+  .pin-input { letter-spacing:12px; text-align:center; font-size:24px; font-weight:700; }
+  .btn-primary { width:100%; padding:18px; border:none; border-radius:var(--radius-sm); background:var(--teal); color:#fff; font-size:16px; font-weight:600; font-family:var(--font); cursor:pointer; transition:all .2s; margin-top:8px; }
+  .btn-primary:hover { background:var(--teal-dark); }
+  .btn-primary:active { transform:scale(.98); }
+  .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-secondary { width:100%; padding:16px; border:1.5px solid rgba(255,255,255,.2); border-radius:var(--radius-sm); background:transparent; color:rgba(255,255,255,.7); font-size:14px; font-weight:500; font-family:var(--font); cursor:pointer; margin-top:12px; }
+  .error-msg { color:var(--red); font-size:13px; margin-top:8px; min-height:20px; }
+
+  /* ── Account ── */
+  .account-screen { background:var(--bg); }
+  .account-header { background:var(--black); color:#fff; padding:24px 24px 40px; border-radius:0 0 24px 24px; }
+  .account-top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; }
+  .greeting { font-size:14px; color:rgba(255,255,255,.5); }
+  .logout-btn { background:rgba(255,255,255,.1); border:none; color:rgba(255,255,255,.7); font-size:13px; font-family:var(--font); font-weight:500; padding:8px 16px; border-radius:20px; cursor:pointer; }
+  .account-name { font-size:24px; font-weight:700; margin-bottom:4px; letter-spacing:-.3px; }
+  .balance-label { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,.5); margin-top:20px; margin-bottom:8px; }
+  .balance-amount { font-size:40px; font-weight:800; letter-spacing:-1px; }
+  .balance-amount .currency { font-size:24px; font-weight:600; opacity:.6; vertical-align:top; }
+  .account-body { padding:24px; flex:1; }
+  .goal-info-card { background:var(--white); border-radius:var(--radius); padding:24px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.04); border:1px solid var(--gray-200); }
+  .goal-info-label { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--gray-400); margin-bottom:6px; }
+  .goal-info-value { font-size:18px; font-weight:700; color:var(--teal); }
+  .goal-mini-progress { margin-top:12px; height:6px; background:var(--gray-100); border-radius:3px; overflow:hidden; }
+  .goal-mini-fill { height:100%; background:linear-gradient(90deg,var(--teal),var(--mint)); border-radius:3px; transition:width .5s; }
+  .your-contrib { display:flex; justify-content:space-between; margin-top:12px; font-size:13px; color:var(--gray-500); }
+  .your-contrib strong { color:var(--black); }
+  .send-btn { width:100%; padding:20px; border:none; border-radius:var(--radius); background:var(--black); color:#fff; font-size:17px; font-weight:600; font-family:var(--font); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; margin-top:24px; }
+  .send-btn:active { transform:scale(.98); }
+  .recent-txs { margin-top:28px; }
+  .recent-txs-title { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--gray-400); margin-bottom:12px; }
+  .mini-tx { display:flex; align-items:center; padding:12px 0; border-bottom:1px solid var(--gray-100); }
+  .mini-tx:last-child { border-bottom:none; }
+  .mini-tx-icon { width:32px; height:32px; border-radius:50%; background:var(--teal-light); display:flex; align-items:center; justify-content:center; margin-right:12px; flex-shrink:0; }
+  .mini-tx-icon svg { width:14px; height:14px; color:var(--teal); }
+  .mini-tx-info { flex:1; }
+  .mini-tx-label { font-size:14px; font-weight:500; }
+  .mini-tx-time { font-size:12px; color:var(--gray-400); }
+  .mini-tx-amount { font-size:14px; font-weight:700; color:var(--teal); }
+
+  /* ── Transfer ── */
+  .transfer-screen { background:var(--white); }
+  .transfer-header { display:flex; align-items:center; padding:20px 24px; border-bottom:1px solid var(--gray-100); }
+  .back-btn { background:none; border:none; cursor:pointer; padding:8px; margin-right:12px; color:var(--black); display:flex; }
+  .transfer-title { font-size:17px; font-weight:600; }
+  .transfer-body { flex:1; display:flex; flex-direction:column; align-items:center; padding:48px 24px 24px; }
+  .transfer-to { font-size:13px; color:var(--gray-400); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+  .transfer-dest { font-size:16px; font-weight:600; margin-bottom:40px; }
+  .amount-display { font-size:56px; font-weight:800; letter-spacing:-2px; margin-bottom:8px; min-height:68px; transition:color .2s; }
+  .amount-display.error { color:var(--red); }
+  .amount-hint { font-size:13px; color:var(--gray-400); margin-bottom:40px; min-height:20px; }
+  .amount-hint.error { color:var(--red); }
+  .numpad { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; max-width:320px; margin-bottom:24px; }
+  .numpad-key { padding:18px; border:none; border-radius:var(--radius-sm); background:var(--gray-100); font-size:22px; font-weight:600; font-family:var(--font); color:var(--black); cursor:pointer; transition:all .15s; user-select:none; -webkit-tap-highlight-color:transparent; }
+  .numpad-key:active { background:var(--gray-200); transform:scale(.95); }
+  .confirm-btn { width:100%; max-width:320px; padding:20px; border:none; border-radius:var(--radius); background:var(--teal); color:#fff; font-size:17px; font-weight:600; font-family:var(--font); cursor:pointer; }
+  .confirm-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* ── Modal ── */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); backdrop-filter:blur(4px); z-index:100; align-items:flex-end; justify-content:center; }
+  .modal-overlay.active { display:flex; }
+  .modal-sheet { background:var(--white); border-radius:24px 24px 0 0; width:100%; max-width:500px; padding:32px 24px 40px; animation:slideUp .3s ease-out; }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-handle { width:40px; height:4px; background:var(--gray-300); border-radius:2px; margin:0 auto 24px; }
+  .modal-title { font-size:20px; font-weight:700; text-align:center; margin-bottom:24px; }
+  .modal-detail { display:flex; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--gray-100); font-size:15px; }
+  .modal-detail-label { color:var(--gray-500); }
+  .modal-detail-value { font-weight:600; }
+  .modal-actions { display:flex; gap:12px; margin-top:28px; }
+  .modal-cancel { flex:1; padding:16px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); background:var(--white); color:var(--black); font-size:15px; font-weight:600; font-family:var(--font); cursor:pointer; }
+  .modal-confirm { flex:2; padding:16px; border:none; border-radius:var(--radius-sm); background:var(--teal); color:#fff; font-size:15px; font-weight:600; font-family:var(--font); cursor:pointer; }
+
+  /* ── Success ── */
+  .success-screen { background:var(--white); align-items:center; justify-content:center; padding:40px; text-align:center; }
+  .success-check { width:80px; height:80px; border-radius:50%; background:var(--teal); display:flex; align-items:center; justify-content:center; margin-bottom:28px; animation:scaleIn .4s cubic-bezier(.22,1,.36,1); }
+  @keyframes scaleIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+  .success-check svg { width:36px; height:36px; color:#fff; }
+  .success-title { font-size:24px; font-weight:700; margin-bottom:8px; }
+  .success-subtitle { font-size:15px; color:var(--gray-500); margin-bottom:8px; }
+  .success-amount { font-size:40px; font-weight:800; color:var(--teal); margin-bottom:8px; letter-spacing:-1px; }
+  .success-to { font-size:14px; color:var(--gray-400); margin-bottom:40px; }
+  .success-balance { background:var(--gray-100); padding:16px 24px; border-radius:var(--radius-sm); margin-bottom:32px; font-size:14px; color:var(--gray-500); }
+  .success-balance strong { color:var(--black); }
+  .done-btn { width:100%; max-width:320px; padding:18px; border:none; border-radius:var(--radius-sm); background:var(--black); color:#fff; font-size:16px; font-weight:600; font-family:var(--font); cursor:pointer; }
+</style>
+</head>
+<body>
+
+  <!-- ═══ NO GROUP ID ═══ -->
+  <div class="screen error-screen-page" id="screen-error" style="display:none;">
+    <div>
+      <h2>No savings group found</h2>
+      <p>This page needs a group link.<br>Ask your group organizer for the sender link.</p>
+    </div>
+  </div>
+
+  <!-- ═══ LOGIN ═══ -->
+  <div class="screen login-screen" id="screen-login">
+    <div class="login-content">
+      <div class="login-logo">GoalSave</div>
+      <h1 class="login-title">Welcome back.</h1>
+      <p class="login-subtitle">Sign in to contribute to your group savings goal.</p>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" id="login-name" type="text" placeholder="e.g. Alex Chen" autocomplete="name" autocapitalize="words">
+      </div>
+      <div class="form-group">
+        <label class="form-label">PIN</label>
+        <input class="form-input pin-input" id="login-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+      </div>
+      <div class="error-msg" id="login-error"></div>
+      <button class="btn-primary" onclick="handleLogin()">Sign In</button>
+      <button class="btn-secondary" onclick="handleRegister()">Create New Account</button>
+    </div>
+  </div>
+
+  <!-- ═══ ACCOUNT ═══ -->
+  <div class="screen account-screen" id="screen-account">
+    <div class="account-header">
+      <div class="account-top-bar">
+        <span class="greeting">Welcome back</span>
+        <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
+      </div>
+      <div class="account-name" id="account-name"></div>
+      <div class="balance-label">Your Balance</div>
+      <div class="balance-amount"><span class="currency" id="acct-curr">$</span><span id="account-balance">0.00</span></div>
+    </div>
+    <div class="account-body">
+      <div class="goal-info-card">
+        <div class="goal-info-label">Group Goal Progress</div>
+        <div class="goal-info-value" id="account-goal-progress">$0 / $0</div>
+        <div class="goal-mini-progress"><div class="goal-mini-fill" id="account-goal-fill" style="width:0%"></div></div>
+        <div class="your-contrib"><span>Your contribution</span><strong id="account-contributed">$0.00</strong></div>
+      </div>
+      <button class="send-btn" onclick="showTransfer()">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-4 4m4-4l4 4"/></svg>
+        Send to Group Savings
+      </button>
+      <div class="recent-txs" id="recent-txs"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TRANSFER ═══ -->
+  <div class="screen transfer-screen" id="screen-transfer">
+    <div class="transfer-header">
+      <button class="back-btn" onclick="showAccount()"><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+      <span class="transfer-title">Send Money</span>
+    </div>
+    <div class="transfer-body">
+      <div class="transfer-to">Sending to</div>
+      <div class="transfer-dest" id="transfer-goal-name">Group Savings</div>
+      <div class="amount-display" id="amount-display">$0</div>
+      <div class="amount-hint" id="amount-hint">Enter amount to send</div>
+      <div class="numpad">
+        <button class="numpad-key" onclick="numpadPress('1')">1</button>
+        <button class="numpad-key" onclick="numpadPress('2')">2</button>
+        <button class="numpad-key" onclick="numpadPress('3')">3</button>
+        <button class="numpad-key" onclick="numpadPress('4')">4</button>
+        <button class="numpad-key" onclick="numpadPress('5')">5</button>
+        <button class="numpad-key" onclick="numpadPress('6')">6</button>
+        <button class="numpad-key" onclick="numpadPress('7')">7</button>
+        <button class="numpad-key" onclick="numpadPress('8')">8</button>
+        <button class="numpad-key" onclick="numpadPress('9')">9</button>
+        <button class="numpad-key" onclick="numpadPress('.')">.</button>
+        <button class="numpad-key" onclick="numpadPress('0')">0</button>
+        <button class="numpad-key" onclick="numpadDelete()">&#9003;</button>
+      </div>
+      <button class="confirm-btn" id="send-confirm-btn" onclick="showConfirmModal()" disabled>Send Money</button>
+    </div>
+  </div>
+
+  <!-- ═══ CONFIRM MODAL ═══ -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Confirm Transfer</div>
+      <div class="modal-detail"><span class="modal-detail-label">To</span><span class="modal-detail-value" id="modal-to">Group Savings</span></div>
+      <div class="modal-detail"><span class="modal-detail-label">Amount</span><span class="modal-detail-value" id="modal-amount">$0</span></div>
+      <div class="modal-detail"><span class="modal-detail-label">From</span><span class="modal-detail-value" id="modal-from">You</span></div>
+      <div class="modal-detail"><span class="modal-detail-label">New Balance</span><span class="modal-detail-value" id="modal-new-balance">$0</span></div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="hideConfirmModal()">Cancel</button>
+        <button class="modal-confirm" id="modal-confirm-btn" onclick="executeTransfer()">Confirm & Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SUCCESS ═══ -->
+  <div class="screen success-screen" id="screen-success">
+    <div class="success-check"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+    <div class="success-title">Transfer Successful</div>
+    <div class="success-subtitle">You sent</div>
+    <div class="success-amount" id="success-amount">$0</div>
+    <div class="success-to">to Group Savings</div>
+    <div class="success-balance">Your new balance is <strong id="success-balance">$0</strong></div>
+    <button class="done-btn" onclick="showAccount()">Done</button>
+  </div>
+
+<script>
+  // ── Blob ID from URL hash ──
+  const BLOB_ID = window.location.hash.slice(1);
+  if (!BLOB_ID) {
+    document.getElementById('screen-error').style.display = 'flex';
+    document.getElementById('screen-login').classList.remove('active');
+  } else {
+    document.getElementById('screen-login').classList.add('active');
+  }
+
+  const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
+  let currentUser = null;
+  let storeData = null;
+  let amountStr = '';
+  let CURR = '$';
+
+  function fmt(n) { return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtTime(ts) { return new Date(ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── Read latest data from blob ──
+  async function loadData() {
+    const res = await fetch(BLOB_URL, { headers:{'Accept':'application/json'} });
+    if (!res.ok) throw new Error('Failed to load data');
+    storeData = await res.json();
+    CURR = storeData.currency || '$';
+    return storeData;
+  }
+
+  // ── Write full data back to blob ──
+  async function saveData(data) {
+    const res = await fetch(BLOB_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to save data');
+  }
+
+  // ── Login ──
+  async function handleLogin() {
+    const name = document.getElementById('login-name').value.trim();
+    const pin = document.getElementById('login-pin').value.trim();
+    const err = document.getElementById('login-error');
+    err.textContent = '';
+    if (!name || !pin) { err.textContent = 'Please enter your name and PIN.'; return; }
+    if (pin.length !== 4) { err.textContent = 'PIN must be 4 digits.'; return; }
+
+    try {
+      await loadData();
+      const account = storeData.accounts.find(a => a.name.toLowerCase() === name.toLowerCase() && a.pin === pin);
+      if (!account) { err.textContent = 'Invalid name or PIN.'; return; }
+      currentUser = { ...account, pin };
+      renderAccount();
+      showScreen('screen-account');
+    } catch(e) { err.textContent = 'Cannot reach server. Try again.'; }
+  }
+
+  async function handleRegister() {
+    const name = document.getElementById('login-name').value.trim();
+    const pin = document.getElementById('login-pin').value.trim();
+    const err = document.getElementById('login-error');
+    err.textContent = '';
+    if (!name || !pin) { err.textContent = 'Enter a name and 4-digit PIN to register.'; return; }
+    if (pin.length !== 4) { err.textContent = 'PIN must be 4 digits.'; return; }
+
+    try {
+      await loadData();
+      if (storeData.accounts.find(a => a.name.toLowerCase() === name.toLowerCase())) {
+        err.textContent = 'Account already exists. Try signing in.'; return;
+      }
+      const account = { name, pin, balance: 2000, contributed: 0 };
+      storeData.accounts.push(account);
+      await saveData(storeData);
+      currentUser = { ...account, pin };
+      renderAccount();
+      showScreen('screen-account');
+    } catch(e) { err.textContent = 'Error: ' + e.message; }
+  }
+
+  function handleLogout() {
+    currentUser = null;
+    document.getElementById('login-name').value = '';
+    document.getElementById('login-pin').value = '';
+    document.getElementById('login-error').textContent = '';
+    showScreen('screen-login');
+  }
+
+  // ── Account ──
+  function renderAccount() {
+    // Refresh user data from store
+    const acc = storeData.accounts.find(a => a.name.toLowerCase() === currentUser.name.toLowerCase());
+    if (acc) { currentUser.balance = acc.balance; currentUser.contributed = acc.contributed; }
+
+    document.getElementById('acct-curr').textContent = CURR;
+    document.getElementById('account-name').textContent = currentUser.name;
+    document.getElementById('account-balance').textContent = fmt(currentUser.balance);
+    document.getElementById('account-contributed').textContent = CURR + fmt(currentUser.contributed);
+
+    const total = storeData.transactions.reduce((s,t)=>s+t.amount,0);
+    const pct = Math.min((total/storeData.goalAmount)*100,100);
+    document.getElementById('account-goal-progress').textContent = CURR+fmt(total)+' / '+CURR+fmt(storeData.goalAmount);
+    document.getElementById('account-goal-fill').style.width = pct+'%';
+
+    // Recent user txs
+    const myTxs = storeData.transactions.filter(t=>t.name.toLowerCase()===currentUser.name.toLowerCase()).reverse().slice(0,5);
+    const container = document.getElementById('recent-txs');
+    if (myTxs.length > 0) {
+      container.innerHTML = `<div class="recent-txs-title">Your Transactions</div>` +
+        myTxs.map(tx=>`
+          <div class="mini-tx">
+            <div class="mini-tx-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-4 4m4-4l4 4"/></svg></div>
+            <div class="mini-tx-info"><div class="mini-tx-label">To Group Savings</div><div class="mini-tx-time">${fmtTime(tx.timestamp)}</div></div>
+            <div class="mini-tx-amount">-${CURR}${fmt(tx.amount)}</div>
+          </div>`).join('');
+    } else { container.innerHTML = ''; }
+  }
+
+  async function showAccount() {
+    try { await loadData(); } catch(e) {}
+    renderAccount();
+    showScreen('screen-account');
+  }
+
+  // ── Transfer ──
+  function showTransfer() {
+    amountStr = '';
+    updateAmountDisplay();
+    document.getElementById('transfer-goal-name').textContent = storeData.goalName || 'Group Savings';
+    showScreen('screen-transfer');
+  }
+
+  function numpadPress(key) {
+    if (key==='.' && amountStr.includes('.')) return;
+    if (key==='.' && amountStr==='') { amountStr='0.'; updateAmountDisplay(); return; }
+    const dot=amountStr.indexOf('.');
+    if (dot!==-1 && amountStr.length-dot>2) return;
+    if (amountStr.length>=10) return;
+    amountStr += key;
+    updateAmountDisplay();
+  }
+  function numpadDelete() { amountStr=amountStr.slice(0,-1); updateAmountDisplay(); }
+
+  function updateAmountDisplay() {
+    const d=document.getElementById('amount-display'), h=document.getElementById('amount-hint'), b=document.getElementById('send-confirm-btn');
+    const val=parseFloat(amountStr)||0;
+    d.textContent=CURR+(amountStr||'0');
+    d.classList.remove('error'); h.classList.remove('error');
+    if(val>currentUser.balance){ d.classList.add('error'); h.classList.add('error'); h.textContent='Exceeds your balance of '+CURR+fmt(currentUser.balance); b.disabled=true; }
+    else if(val>0){ h.textContent='Available: '+CURR+fmt(currentUser.balance); b.disabled=false; }
+    else { h.textContent='Enter amount to send'; b.disabled=true; }
+  }
+
+  function showConfirmModal() {
+    const val=parseFloat(amountStr)||0;
+    if(val<=0||val>currentUser.balance)return;
+    document.getElementById('modal-to').textContent=storeData.goalName||'Group Savings';
+    document.getElementById('modal-amount').textContent=CURR+fmt(val);
+    document.getElementById('modal-from').textContent=currentUser.name;
+    document.getElementById('modal-new-balance').textContent=CURR+fmt(currentUser.balance-val);
+    document.getElementById('confirm-modal').classList.add('active');
+  }
+  function hideConfirmModal() { document.getElementById('confirm-modal').classList.remove('active'); }
+
+  async function executeTransfer() {
+    const val=parseFloat(amountStr)||0;
+    const btn=document.getElementById('modal-confirm-btn');
+    btn.textContent='Sending...'; btn.disabled=true;
+
+    try {
+      // Re-read latest data to avoid race conditions
+      await loadData();
+      const account = storeData.accounts.find(a=>a.name.toLowerCase()===currentUser.name.toLowerCase() && a.pin===currentUser.pin);
+      if(!account) { alert('Auth failed. Please sign in again.'); hideConfirmModal(); handleLogout(); return; }
+      if(val>account.balance) { alert('Insufficient balance. Someone may have made a transfer.'); hideConfirmModal(); return; }
+
+      account.balance -= val;
+      account.contributed += val;
+      storeData.transactions.push({
+        id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+        name: account.name,
+        amount: val,
+        timestamp: new Date().toISOString(),
+      });
+      await saveData(storeData);
+
+      currentUser.balance = account.balance;
+      currentUser.contributed = account.contributed;
+      hideConfirmModal();
+
+      document.getElementById('success-amount').textContent = CURR+fmt(val);
+      document.getElementById('success-balance').textContent = CURR+fmt(currentUser.balance);
+      showScreen('screen-success');
+    } catch(e) {
+      alert('Network error. Please try again.');
+      hideConfirmModal();
+    }
+    btn.textContent='Confirm & Send'; btn.disabled=false;
+  }
+
+  // ── Input helpers ──
+  document.getElementById('login-pin').addEventListener('input', function(){ this.value=this.value.replace(/\D/g,'').slice(0,4); });
+  document.querySelectorAll('#login-name,#login-pin').forEach(el=>{ el.addEventListener('keydown',e=>{ if(e.key==='Enter') handleLogin(); }); });
+</script>
+</body>
+</html>

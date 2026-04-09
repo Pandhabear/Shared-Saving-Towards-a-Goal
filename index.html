@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shared Goal Savings — Setup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  :root {
+    --bg: #f7f7f7; --white: #fff; --black: #1a1a1a;
+    --gray-200: #e8e8e8; --gray-400: #999; --gray-500: #666;
+    --teal: #0e856e; --teal-dark: #0a6b58; --mint: #36c5a0;
+    --radius: 16px; --font: 'Inter', -apple-system, sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font); background:var(--black); color:#fff; min-height:100vh; display:flex; align-items:center; justify-content:center; -webkit-font-smoothing:antialiased; }
+  .container { max-width:520px; width:100%; padding:40px 32px; }
+  .logo { font-size:15px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--mint); margin-bottom:48px; }
+  h1 { font-size:36px; font-weight:800; letter-spacing:-1px; line-height:1.15; margin-bottom:12px; }
+  .sub { font-size:15px; color:rgba(255,255,255,0.5); line-height:1.6; margin-bottom:40px; }
+  .form-group { margin-bottom:20px; }
+  label { display:block; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.5); margin-bottom:8px; }
+  input, select { width:100%; padding:16px 20px; border:1.5px solid rgba(255,255,255,0.15); border-radius:10px; background:rgba(255,255,255,0.06); color:#fff; font-size:16px; font-family:var(--font); font-weight:500; outline:none; transition:border-color .2s; }
+  input:focus, select:focus { border-color:var(--teal); }
+  input::placeholder { color:rgba(255,255,255,0.25); }
+  select option { background:var(--black); color:#fff; }
+  .btn { width:100%; padding:18px; border:none; border-radius:10px; background:var(--teal); color:#fff; font-size:16px; font-weight:600; font-family:var(--font); cursor:pointer; transition:all .2s; margin-top:8px; }
+  .btn:hover { background:var(--teal-dark); }
+  .btn:active { transform:scale(.98); }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .divider { text-align:center; color:rgba(255,255,255,0.3); font-size:13px; margin:28px 0; position:relative; }
+  .divider::before, .divider::after { content:''; position:absolute; top:50%; width:40%; height:1px; background:rgba(255,255,255,0.1); }
+  .divider::before { left:0; } .divider::after { right:0; }
+  .link-box { background:rgba(255,255,255,0.06); border:1.5px solid rgba(255,255,255,0.15); border-radius:10px; padding:16px; margin-bottom:16px; }
+  .link-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.4); margin-bottom:8px; }
+  .link-url { font-size:13px; color:var(--mint); word-break:break-all; font-family:'SF Mono','Fira Code',monospace; line-height:1.5; }
+  .link-url a { color:var(--mint); text-decoration:none; }
+  .link-url a:hover { text-decoration:underline; }
+  .copy-btn { background:rgba(255,255,255,0.1); border:none; color:#fff; font-size:12px; font-family:var(--font); font-weight:500; padding:6px 14px; border-radius:6px; cursor:pointer; margin-top:8px; }
+  .copy-btn:hover { background:rgba(255,255,255,0.2); }
+  .result { display:none; }
+  .result.show { display:block; }
+  .note { font-size:13px; color:rgba(255,255,255,0.4); line-height:1.6; margin-top:24px; }
+  .error { color:#e74c3c; font-size:13px; margin-top:8px; }
+  .step-num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:var(--teal); font-size:12px; font-weight:700; margin-right:8px; flex-shrink:0; }
+  .steps { margin-bottom:32px; }
+  .step { display:flex; align-items:flex-start; margin-bottom:14px; font-size:14px; color:rgba(255,255,255,0.7); line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- SETUP FORM -->
+  <div id="setup-form">
+    <div class="logo">GoalSave</div>
+    <h1>Create your savings group.</h1>
+    <p class="sub">Set up a shared goal and get links to share with your group. No accounts or signups needed — everything runs in the browser.</p>
+
+    <div class="steps">
+      <div class="step"><span class="step-num">1</span> Name your goal and set a target amount below</div>
+      <div class="step"><span class="step-num">2</span> Share the Dashboard link on a big screen</div>
+      <div class="step"><span class="step-num">3</span> Share the Sender link (or scan the QR) to contribute</div>
+    </div>
+
+    <div class="form-group">
+      <label>Goal Name</label>
+      <input id="goal-name" type="text" placeholder="e.g. Dream Vacation Fund" value="Dream Vacation Fund">
+    </div>
+    <div class="form-group">
+      <label>Target Amount ($)</label>
+      <input id="goal-amount" type="number" placeholder="10000" value="10000" min="1">
+    </div>
+    <div class="form-group">
+      <label>Currency Symbol</label>
+      <input id="currency" type="text" placeholder="$" value="$" maxlength="3">
+    </div>
+    <div class="error" id="error-msg"></div>
+    <button class="btn" id="create-btn" onclick="createGroup()">Create Savings Group</button>
+  </div>
+
+  <!-- RESULT LINKS -->
+  <div class="result" id="result">
+    <div class="logo">GoalSave</div>
+    <h1>You're all set!</h1>
+    <p class="sub">Share these links with your group. Anyone with the link can view the dashboard or contribute.</p>
+
+    <div class="link-box">
+      <div class="link-label">Dashboard (show on a big screen)</div>
+      <div class="link-url"><a id="dash-link" href="#" target="_blank"></a></div>
+      <button class="copy-btn" onclick="copyLink('dash-link')">Copy link</button>
+    </div>
+
+    <div class="link-box">
+      <div class="link-label">Sender (share with participants)</div>
+      <div class="link-url"><a id="sender-link" href="#" target="_blank"></a></div>
+      <button class="copy-btn" onclick="copyLink('sender-link')">Copy link</button>
+    </div>
+
+    <div class="note">
+      <strong>Bookmark these links!</strong> They contain your unique group ID. If you lose them, you lose access to this savings group. Data persists as long as the storage service is available.
+    </div>
+
+    <button class="btn" style="margin-top:24px;" onclick="window.open(document.getElementById('dash-link').href)">Open Dashboard</button>
+  </div>
+</div>
+
+<script>
+  /**
+   * We use jsonblob.com as a free, no-signup JSON store.
+   * Each savings group gets its own blob with a unique ID.
+   * Both dashboard.html and sender.html read/write to this blob via its ID.
+   */
+  const JSONBLOB_API = 'https://jsonblob.com/api/jsonBlob';
+
+  function getSeedData(goalName, goalAmount, currency) {
+    return {
+      goalAmount: goalAmount,
+      goalName: goalName,
+      currency: currency,
+      accounts: [
+        { name: "Alex Chen",     pin: "1234", balance: 2000, contributed: 0 },
+        { name: "Maria Santos",  pin: "5678", balance: 2500, contributed: 0 },
+        { name: "James Wilson",  pin: "4321", balance: 1800, contributed: 0 },
+        { name: "Priya Patel",   pin: "8765", balance: 3000, contributed: 0 },
+      ],
+      transactions: [],
+    };
+  }
+
+  async function createGroup() {
+    const btn = document.getElementById('create-btn');
+    const err = document.getElementById('error-msg');
+    err.textContent = '';
+
+    const goalName = document.getElementById('goal-name').value.trim();
+    const goalAmount = parseFloat(document.getElementById('goal-amount').value);
+    const currency = document.getElementById('currency').value.trim() || '$';
+
+    if (!goalName) { err.textContent = 'Please enter a goal name.'; return; }
+    if (!goalAmount || goalAmount <= 0) { err.textContent = 'Please enter a valid amount.'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    try {
+      const res = await fetch(JSONBLOB_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(getSeedData(goalName, goalAmount, currency)),
+      });
+
+      if (!res.ok) throw new Error('Failed to create blob: ' + res.status);
+
+      // jsonblob returns the blob URL in the Location header
+      const location = res.headers.get('Location') || res.headers.get('location');
+      let blobId;
+      if (location) {
+        blobId = location.split('/').pop();
+      } else {
+        // Some browsers don't expose Location — try x-jsonblob header
+        const xBlob = res.headers.get('x-jsonblob');
+        if (xBlob) {
+          blobId = xBlob;
+        } else {
+          throw new Error('Could not get blob ID from response headers.');
+        }
+      }
+
+      // Build links
+      const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '');
+      const dashUrl = base + '/dashboard.html#' + blobId;
+      const senderUrl = base + '/sender.html#' + blobId;
+
+      document.getElementById('dash-link').href = dashUrl;
+      document.getElementById('dash-link').textContent = dashUrl;
+      document.getElementById('sender-link').href = senderUrl;
+      document.getElementById('sender-link').textContent = senderUrl;
+
+      document.getElementById('setup-form').style.display = 'none';
+      document.getElementById('result').classList.add('show');
+
+    } catch (e) {
+      err.textContent = 'Error: ' + e.message;
+      btn.disabled = false;
+      btn.textContent = 'Create Savings Group';
+    }
+  }
+
+  function copyLink(id) {
+    const text = document.getElementById(id).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      event.target.textContent = 'Copied!';
+      setTimeout(() => event.target.textContent = 'Copy link', 2000);
+    });
+  }
+</script>
+</body>
+</html>

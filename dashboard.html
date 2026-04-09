@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shared Goal Savings — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  :root {
+    --bg: #f7f7f7; --white: #ffffff; --black: #1a1a1a;
+    --gray-100: #f2f2f2; --gray-200: #e8e8e8; --gray-300: #d1d1d1;
+    --gray-400: #999999; --gray-500: #666666;
+    --teal: #0e856e; --teal-light: #e8f5f1; --teal-dark: #0a6b58;
+    --mint: #36c5a0; --green-success: #00c853;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+    --radius: 16px; --radius-sm: 10px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font); background:var(--bg); color:var(--black); min-height:100vh; -webkit-font-smoothing:antialiased; }
+
+  /* ── Error state ── */
+  .error-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; text-align:center; padding:40px; }
+  .error-screen h2 { font-size:24px; margin-bottom:12px; }
+  .error-screen p { color:var(--gray-500); font-size:15px; line-height:1.6; }
+  .error-screen a { color:var(--teal); text-decoration:none; font-weight:600; }
+
+  /* ── Layout ── */
+  .app { max-width:1400px; margin:0 auto; padding:40px 48px; }
+  .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:40px; }
+  .header-left h1 { font-size:28px; font-weight:700; letter-spacing:-0.5px; }
+  .header-left p { font-size:14px; color:var(--gray-500); margin-top:4px; }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .live-dot { width:8px; height:8px; background:var(--green-success); border-radius:50%; animation:pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+  .live-label { font-size:13px; font-weight:500; color:var(--gray-500); text-transform:uppercase; letter-spacing:1px; }
+
+  /* ── Hero ── */
+  .hero-card { background:var(--black); color:#fff; border-radius:24px; padding:48px 56px; margin-bottom:32px; position:relative; overflow:hidden; }
+  .hero-card::before { content:''; position:absolute; top:-80px; right:-80px; width:300px; height:300px; background:radial-gradient(circle,rgba(14,133,110,.3) 0%,transparent 70%); pointer-events:none; }
+  .hero-card::after { content:''; position:absolute; bottom:-60px; left:30%; width:200px; height:200px; background:radial-gradient(circle,rgba(54,197,160,.15) 0%,transparent 70%); pointer-events:none; }
+  .hero-label { font-size:14px; font-weight:500; color:rgba(255,255,255,.6); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+  .hero-amount { font-size:72px; font-weight:800; letter-spacing:-2px; line-height:1; margin-bottom:8px; position:relative; z-index:1; }
+  .hero-amount .currency { font-size:42px; font-weight:600; vertical-align:top; margin-right:4px; opacity:.7; }
+  .hero-goal { font-size:16px; color:rgba(255,255,255,.5); font-weight:400; position:relative; z-index:1; }
+  .hero-goal span { color:var(--mint); font-weight:600; }
+
+  /* ── Progress ── */
+  .progress-section { margin-top:32px; position:relative; z-index:1; }
+  .progress-bar-track { width:100%; height:8px; background:rgba(255,255,255,.15); border-radius:4px; overflow:hidden; }
+  .progress-bar-fill { height:100%; background:linear-gradient(90deg,var(--teal),var(--mint)); border-radius:4px; transition:width .8s cubic-bezier(.22,1,.36,1); }
+  .progress-labels { display:flex; justify-content:space-between; margin-top:10px; font-size:13px; color:rgba(255,255,255,.5); }
+  .progress-labels .pct { color:var(--mint); font-weight:600; }
+
+  /* ── Grid ── */
+  .grid { display:grid; grid-template-columns:1fr 1fr 340px; gap:24px; }
+  .card { background:var(--white); border-radius:var(--radius); padding:28px; box-shadow:var(--shadow-sm); border:1px solid var(--gray-200); }
+  .card-title { font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--gray-400); margin-bottom:20px; }
+
+  /* ── Contributors ── */
+  .contributor { display:flex; align-items:center; padding:14px 0; border-bottom:1px solid var(--gray-100); }
+  .contributor:last-child { border-bottom:none; }
+  .contributor-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:#fff; margin-right:14px; flex-shrink:0; }
+  .contributor-info { flex:1; }
+  .contributor-name { font-size:15px; font-weight:600; }
+  .contributor-sub { font-size:12px; color:var(--gray-400); margin-top:2px; }
+  .contributor-amount { font-size:16px; font-weight:700; }
+
+  /* ── Transactions ── */
+  .tx-list { max-height:420px; overflow-y:auto; }
+  .tx-list::-webkit-scrollbar { width:4px; }
+  .tx-list::-webkit-scrollbar-thumb { background:var(--gray-300); border-radius:2px; }
+  .tx-item { display:flex; align-items:center; padding:12px 0; border-bottom:1px solid var(--gray-100); animation:slideIn .4s ease-out; }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+  .tx-item:last-child { border-bottom:none; }
+  .tx-icon { width:36px; height:36px; border-radius:50%; background:var(--teal-light); display:flex; align-items:center; justify-content:center; margin-right:12px; flex-shrink:0; }
+  .tx-icon svg { width:16px; height:16px; color:var(--teal); }
+  .tx-info { flex:1; }
+  .tx-name { font-size:14px; font-weight:600; }
+  .tx-time { font-size:12px; color:var(--gray-400); margin-top:2px; }
+  .tx-amount { font-size:15px; font-weight:700; color:var(--teal); }
+  .empty-state { text-align:center; padding:40px 20px; color:var(--gray-400); }
+  .empty-state svg { width:48px; height:48px; margin-bottom:12px; opacity:.3; }
+  .empty-state p { font-size:14px; }
+
+  /* ── QR ── */
+  .qr-card { display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .qr-card .card-title { align-self:flex-start; }
+  .qr-wrapper { background:var(--white); padding:16px; border-radius:var(--radius-sm); border:2px solid var(--gray-200); margin-bottom:16px; }
+  .qr-instruction { font-size:13px; color:var(--gray-500); line-height:1.5; }
+  .qr-url { font-size:12px; color:var(--gray-400); margin-top:12px; word-break:break-all; font-family:'SF Mono','Fira Code',monospace; background:var(--gray-100); padding:8px 12px; border-radius:8px; }
+
+  /* ── Stats ── */
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+  .stat-card { background:var(--white); border-radius:var(--radius-sm); padding:20px 24px; box-shadow:var(--shadow-sm); border:1px solid var(--gray-200); }
+  .stat-label { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--gray-400); margin-bottom:8px; }
+  .stat-value { font-size:24px; font-weight:700; }
+  .stat-value.teal { color:var(--teal); }
+
+  /* ── Toast ── */
+  .toast { position:fixed; top:24px; right:24px; background:var(--black); color:#fff; padding:16px 24px; border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:12px; z-index:100; transform:translateX(120%); transition:transform .4s cubic-bezier(.22,1,.36,1); }
+  .toast.show { transform:translateX(0); }
+  .toast-icon { width:32px; height:32px; background:var(--teal); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .toast-text { font-size:14px; font-weight:500; }
+  .toast-amount { font-weight:700; color:var(--mint); }
+
+  #confetti-canvas { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:200; }
+
+  /* ── Responsive ── */
+  @media (max-width:1200px) { .grid{grid-template-columns:1fr 1fr} .qr-card{grid-column:span 2} }
+  @media (max-width:768px) { .app{padding:20px} .hero-amount{font-size:48px} .hero-card{padding:32px} .grid{grid-template-columns:1fr} .qr-card{grid-column:span 1} .stats-row{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+  <!-- Error screen if no blob ID -->
+  <div class="error-screen" id="error-screen" style="display:none;">
+    <div>
+      <h2>No savings group found</h2>
+      <p>This page needs a group ID in the URL.<br>
+      <a href="index.html">Create a new savings group</a> to get started.</p>
+    </div>
+  </div>
+
+  <canvas id="confetti-canvas"></canvas>
+  <div class="toast" id="toast">
+    <div class="toast-icon">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <div><div class="toast-text" id="toast-text"></div></div>
+  </div>
+
+  <div class="app" id="app" style="display:none;">
+    <div class="header">
+      <div class="header-left">
+        <h1>Shared Goal Savings</h1>
+        <p id="goal-name">Loading...</p>
+      </div>
+      <div class="header-right">
+        <div class="live-dot"></div>
+        <span class="live-label">Live</span>
+      </div>
+    </div>
+
+    <div class="hero-card">
+      <div class="hero-label">Total Saved</div>
+      <div class="hero-amount"><span class="currency" id="curr">$</span><span id="total-amount">0</span></div>
+      <div class="hero-goal">of <span id="goal-amount-display">$0</span> goal</div>
+      <div class="progress-section">
+        <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+        <div class="progress-labels">
+          <span class="pct" id="progress-pct">0%</span>
+          <span id="remaining-text">$0 remaining</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Contributors</div><div class="stat-value" id="stat-contributors">0</div></div>
+      <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value" id="stat-transactions">0</div></div>
+      <div class="stat-card"><div class="stat-label">Average Deposit</div><div class="stat-value teal" id="stat-average">$0</div></div>
+      <div class="stat-card"><div class="stat-label">Last Activity</div><div class="stat-value" id="stat-last" style="font-size:16px;">—</div></div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">Contributors</div>
+        <div id="contributors-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent Transactions</div>
+        <div class="tx-list" id="tx-list">
+          <div class="empty-state">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p>No transactions yet.<br>Scan the QR code to contribute!</p>
+          </div>
+        </div>
+      </div>
+      <div class="card qr-card">
+        <div class="card-title">Join & Contribute</div>
+        <div class="qr-wrapper" id="qr-code"></div>
+        <p class="qr-instruction">Scan with your phone's camera<br>to open the savings app</p>
+        <div class="qr-url" id="qr-url">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ── Get blob ID from URL hash ──
+  const BLOB_ID = window.location.hash.slice(1);
+  if (!BLOB_ID) {
+    document.getElementById('error-screen').style.display = 'flex';
+  } else {
+    document.getElementById('app').style.display = 'block';
+    init();
+  }
+
+  const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
+  const AVATAR_COLORS = ['#0e856e','#1a1a1a','#e67e22','#3498db','#9b59b6','#e74c3c','#2ecc71','#f39c12'];
+  let CURR = '$';
+  let lastTxCount = 0;
+
+  function getInitials(n) { return n.split(' ').map(w=>w[0]).join('').toUpperCase(); }
+  function getColor(n) { let h=0; for(let i=0;i<n.length;i++) h=n.charCodeAt(i)+((h<<5)-h); return AVATAR_COLORS[Math.abs(h)%AVATAR_COLORS.length]; }
+  function fmt(n) { return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function timeAgo(ts) {
+    const m=Math.floor((Date.now()-new Date(ts).getTime())/60000);
+    if(m<1)return'Just now'; if(m<60)return m+'m ago';
+    const h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago';
+  }
+  function fmtTime(ts) { return new Date(ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+
+  function renderContributors(accounts) {
+    const el=document.getElementById('contributors-list');
+    const sorted=[...accounts].sort((a,b)=>b.contributed-a.contributed);
+    el.innerHTML=sorted.map(a=>`
+      <div class="contributor">
+        <div class="contributor-avatar" style="background:${getColor(a.name)}">${getInitials(a.name)}</div>
+        <div class="contributor-info">
+          <div class="contributor-name">${a.name}</div>
+          <div class="contributor-sub">${a.contributed>0?'Active contributor':'No contributions yet'}</div>
+        </div>
+        <div class="contributor-amount">${CURR}${fmt(a.contributed)}</div>
+      </div>`).join('');
+  }
+
+  function renderTransactions(txs) {
+    const el=document.getElementById('tx-list');
+    if(!txs.length) return;
+    el.innerHTML=[...txs].reverse().map(tx=>`
+      <div class="tx-item">
+        <div class="tx-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-4 4m4-4l4 4"/></svg></div>
+        <div class="tx-info">
+          <div class="tx-name">${tx.name}</div>
+          <div class="tx-time">${fmtTime(tx.timestamp)}</div>
+        </div>
+        <div class="tx-amount">+${CURR}${fmt(tx.amount)}</div>
+      </div>`).join('');
+  }
+
+  function renderAll(data) {
+    CURR = data.currency || '$';
+    document.getElementById('curr').textContent = CURR;
+    const total = data.transactions.reduce((s,t)=>s+t.amount,0);
+    document.getElementById('goal-name').textContent = data.goalName;
+    document.getElementById('total-amount').textContent = fmt(total);
+    document.getElementById('goal-amount-display').textContent = CURR + fmt(data.goalAmount);
+
+    const pct = Math.min((total/data.goalAmount)*100,100);
+    document.getElementById('progress-fill').style.width = pct+'%';
+    document.getElementById('progress-pct').textContent = pct.toFixed(1)+'%';
+    document.getElementById('remaining-text').textContent = CURR+fmt(Math.max(data.goalAmount-total,0))+' remaining';
+
+    const active = data.accounts.filter(a=>a.contributed>0).length;
+    document.getElementById('stat-contributors').textContent = active+'/'+data.accounts.length;
+    document.getElementById('stat-transactions').textContent = data.transactions.length;
+    const avg = data.transactions.length>0 ? total/data.transactions.length : 0;
+    document.getElementById('stat-average').textContent = CURR+fmt(avg);
+    document.getElementById('stat-last').textContent = data.transactions.length>0 ? timeAgo(data.transactions[data.transactions.length-1].timestamp) : '—';
+
+    renderContributors(data.accounts);
+    renderTransactions(data.transactions);
+
+    // Detect new transactions → toast + confetti
+    if (lastTxCount > 0 && data.transactions.length > lastTxCount) {
+      const newOnes = data.transactions.slice(lastTxCount);
+      newOnes.forEach(tx => { showToast(tx.name, tx.amount); launchConfetti(); });
+    }
+    lastTxCount = data.transactions.length;
+  }
+
+  function showToast(name, amount) {
+    const t=document.getElementById('toast');
+    document.getElementById('toast-text').innerHTML=`<strong>${name}</strong> sent <span class="toast-amount">${CURR}${fmt(amount)}</span>`;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),4000);
+  }
+
+  function launchConfetti() {
+    const c=document.getElementById('confetti-canvas'), ctx=c.getContext('2d');
+    c.width=innerWidth; c.height=innerHeight;
+    const ps=[], cols=['#0e856e','#36c5a0','#f39c12','#e74c3c','#3498db','#9b59b6','#fff'];
+    for(let i=0;i<80;i++) ps.push({x:Math.random()*c.width,y:-20-Math.random()*200,w:6+Math.random()*6,h:4+Math.random()*4,vx:(Math.random()-.5)*4,vy:2+Math.random()*4,rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*.2,col:cols[Math.floor(Math.random()*cols.length)],life:1});
+    (function go(){ctx.clearRect(0,0,c.width,c.height);let alive=false;ps.forEach(p=>{if(p.life<=0)return;alive=true;p.x+=p.vx;p.y+=p.vy;p.vy+=.1;p.rot+=p.rv;p.life-=.005;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.globalAlpha=p.life;ctx.fillStyle=p.col;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore()});if(alive)requestAnimationFrame(go);else ctx.clearRect(0,0,c.width,c.height)})();
+  }
+
+  function setupQR() {
+    const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '');
+    const url = base + '/sender.html#' + BLOB_ID;
+    document.getElementById('qr-url').textContent = url;
+    new QRCode(document.getElementById('qr-code'), { text:url, width:200, height:200, colorDark:'#1a1a1a', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M });
+  }
+
+  async function loadState() {
+    try {
+      const res = await fetch(BLOB_URL, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('Blob not found');
+      const data = await res.json();
+      renderAll(data);
+    } catch(e) { console.error('Failed to load:', e); }
+  }
+
+  function init() {
+    setupQR();
+    loadState();
+    // Poll every 3 seconds
+    setInterval(loadState, 3000);
+  }
+</script>
+</body>
+</html>
